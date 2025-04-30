@@ -1,10 +1,9 @@
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver import ActionChains
+from pages.base_page import BasePage
+import allure
 
-class OrderPage:
-    # Шаг 1 — данные пользователя
+class OrderPage(BasePage):
+    # Локаторы — Шаг 1
     NAME_INPUT = (By.XPATH, "//input[@placeholder='* Имя']")
     SURNAME_INPUT = (By.XPATH, "//input[@placeholder='* Фамилия']")
     ADDRESS_INPUT = (By.XPATH, "//input[@placeholder='* Адрес: куда привезти заказ']")
@@ -13,7 +12,7 @@ class OrderPage:
     PHONE_INPUT = (By.XPATH, "//input[@placeholder='* Телефон: на него позвонит курьер']")
     NEXT_BUTTON = (By.XPATH, "//button[text()='Далее']")
 
-    # Шаг 2 — детали заказа
+    # Локаторы — Шаг 2
     DATE_INPUT = (By.XPATH, "//input[@placeholder='* Когда привезти самокат']")
     DURATION_DROPDOWN = (By.CLASS_NAME, "Dropdown-placeholder")
     DURATION_OPTION = (By.CLASS_NAME, "Dropdown-option")
@@ -23,38 +22,35 @@ class OrderPage:
     ORDER_BUTTON = (By.XPATH, "//div[contains(@class, 'Order_Buttons')]/button[text()='Заказать']")
     CONFIRM_BUTTON = (By.XPATH, "//button[text()='Да']")
 
-    # Попап успешного заказа
+    # Локатор — Попап подтверждения
     SUCCESS_POPUP = (By.CLASS_NAME, "Order_ModalHeader__3FDaJ")
 
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 10)
-
+    @allure.step("Заполнение шага 1 формы заказа")
     def fill_step_one(self, name, surname, address, metro_index, phone):
-        self.driver.find_element(*self.NAME_INPUT).send_keys(name)
-        self.driver.find_element(*self.SURNAME_INPUT).send_keys(surname)
-        self.driver.find_element(*self.ADDRESS_INPUT).send_keys(address)
-        self.driver.find_element(*self.METRO_INPUT).click()
-        metro_options = self.wait.until(EC.presence_of_all_elements_located(self.METRO_LIST))
-        metro_options[metro_index].click()
-        self.driver.find_element(*self.PHONE_INPUT).send_keys(phone)
-        self.driver.find_element(*self.NEXT_BUTTON).click()
+        self.send_keys(self.NAME_INPUT, name)
+        self.send_keys(self.SURNAME_INPUT, surname)
+        self.send_keys(self.ADDRESS_INPUT, address)
+        self.click(self.METRO_INPUT)
+        self.click_element_by_index(self.METRO_LIST, metro_index)
+        self.send_keys(self.PHONE_INPUT, phone)
+        self.click(self.NEXT_BUTTON)
 
+    @allure.step("Заполнение шага 2 формы заказа")
     def fill_step_two(self, date, duration, color, comment):
-        self.driver.find_element(*self.DATE_INPUT).send_keys(date)
-        ActionChains(self.driver).move_by_offset(10, 10).click().perform()
-        self.driver.find_element(*self.DURATION_DROPDOWN).click()
-        options = self.wait.until(EC.presence_of_all_elements_located(self.DURATION_OPTION))
-        options[duration - 1].click()
+        self.send_keys(self.DATE_INPUT, date)
+        self.move_and_click_offset()  # чтобы закрыть календарь
+        self.click(self.DURATION_DROPDOWN)
+        self.click_element_by_index(self.DURATION_OPTION, duration - 1)
 
         if color == "black":
-            self.driver.find_element(*self.COLOR_BLACK).click()
+            self.click(self.COLOR_BLACK)
         elif color == "grey":
-            self.driver.find_element(*self.COLOR_GREY).click()
+            self.click(self.COLOR_GREY)
 
-        self.driver.find_element(*self.COMMENT_INPUT).send_keys(comment)
-        self.driver.find_element(*self.ORDER_BUTTON).click()
-        self.wait.until(EC.element_to_be_clickable(self.CONFIRM_BUTTON)).click()
+        self.send_keys(self.COMMENT_INPUT, comment)
+        self.click(self.ORDER_BUTTON)
+        self.click(self.CONFIRM_BUTTON)
 
+    @allure.step("Проверка отображения окна успешного заказа")
     def is_success_popup_displayed(self):
-        return self.wait.until(EC.visibility_of_element_located(self.SUCCESS_POPUP)).is_displayed()
+        return self.wait_until_visible(self.SUCCESS_POPUP).is_displayed()
